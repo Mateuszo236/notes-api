@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+	"strconv"
 )
 
 type Note struct {
@@ -35,8 +37,29 @@ func postNotesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteNotesHandler(w http.ResponseWriter, r *http.Request) {
+	idString := strings.TrimPrefix(r.URL.Path, "/notes/")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Podane ID nie jest liczbą", http.StatusBadRequest)
+		return
+	}	
 
+	targetIndex := -1
+    for i, note := range notes {
+        if note.ID == id {
+            targetIndex = i
+            break
+        }
+    }
+
+	if targetIndex == -1 {
+        http.Error(w, "Nie znaleziono notatki", http.StatusNotFound)
+        return
+    }
+
+	notes = append(notes[:targetIndex], notes[targetIndex+1:]...)
 }
+
 func Handler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -52,7 +75,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	http.HandleFunc("/notes", Handler)
+	http.HandleFunc("/notes/", Handler)
 	http.ListenAndServe(":8080", nil)
 
 }
