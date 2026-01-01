@@ -2,40 +2,57 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"fmt"
+	"net/http"
 )
 
 type Note struct {
-	ID int
-	Content string 
+	ID      int
+	Content string
 }
 
-var notes []Note//slice of notes
-var numberOfNotes int = 0
+var notes = []Note{} //slice of notes
+var nextID int = 1
 
-func createNoteHandler(w http.ResponseWriter, r *http.Request) {
+func getNotesHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notes)
+}
+
+func postNotesHandler(w http.ResponseWriter, r *http.Request) {
 	var theNote Note
+
 	json.NewDecoder(r.Body).Decode(&theNote)
-	theNote.ID = numberOfNotes
-	numberOfNotes++
+
+	theNote.ID = nextID
+	nextID++
+
 	notes = append(notes, theNote)
-	fmt.Printf("dodano notatke %+v. Liczba notatek %d\n", theNote, len(notes))
-	fmt.Fprintf(w, "Numer notatki %d", theNote.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(theNote)
+	fmt.Println(len(notes))
 }
 
-	
+func deleteNotesHandler(w http.ResponseWriter, r *http.Request) {
 
-//HealthHandler
-func HealthHandler(w http.ResponseWriter, r *http.Request){
-	fmt.Fprintf(w, "OK\n")
+}
+func Handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		getNotesHandler(w, r)
+	case "POST":
+		postNotesHandler(w, r)
+	case "DELETE":
+		deleteNotesHandler(w, r)
+	default:
+		fmt.Println("not a case")
+	}
 }
 
-func main(){
+func main() {
 
-	http.HandleFunc("/health", HealthHandler)
-	http.HandleFunc("/notes", createNoteHandler)
-	http.ListenAndServe(":8080" , nil)
+	http.HandleFunc("/notes", Handler)
+	http.ListenAndServe(":8080", nil)
 
-	
 }
