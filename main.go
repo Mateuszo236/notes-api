@@ -16,15 +16,23 @@ type Note struct {
 var notes = []Note{} //slice of notes
 var nextID int = 1
 
-func getNotesHandler(w http.ResponseWriter, r *http.Request) {
+func getNotesHandler(w http.ResponseWriter, r *http.Request) {//Read
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(notes)
 }
 
-func postNotesHandler(w http.ResponseWriter, r *http.Request) {
+func postNotesHandler(w http.ResponseWriter, r *http.Request) {//Creat
 	var theNote Note
 
-	json.NewDecoder(r.Body).Decode(&theNote)
+	if err := json.NewDecoder(r.Body).Decode(&theNote);err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(theNote.Content) == "" {
+        http.Error(w, "Content cannot be empty", http.StatusBadRequest)
+        return
+    }
 
 	theNote.ID = nextID
 	nextID++
@@ -36,13 +44,60 @@ func postNotesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(len(notes))
 }
 
-func deleteNotesHandler(w http.ResponseWriter, r *http.Request) {
+func updateNotesHandler(w http.ResponseWriter, r *http.Request) {
+
+	 
+	
+
 	idString := strings.TrimPrefix(r.URL.Path, "/notes/")
 	id, err := strconv.Atoi(idString)
 	if err != nil {
-		http.Error(w, "Podane ID nie jest liczbą", http.StatusBadRequest)
+		http.Error(w, "Gived ID is not a numer", http.StatusBadRequest)
 		return
-	}	
+	}
+
+	var theNote Note
+
+	if err := json.NewDecoder(r.Body).Decode(&theNote);err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(theNote.Content) == "" {
+        http.Error(w, "Content cannot be empty", http.StatusBadRequest)
+        return
+    }
+	
+	targetIndex := -1
+
+	for i, note := range notes {
+		if note.ID == id {
+			targetIndex = i
+			break
+		}
+	}
+
+	if targetIndex == -1 {
+		http.Error(w, "note with given ID not found", http.StatusNotFound)
+		return
+	}
+	
+	notes[targetIndex].Content = theNote.Content
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(theNote)
+
+	
+
+
+}
+
+func deleteNotesHandler(w http.ResponseWriter, r *http.Request) {//Delete
+	idString := strings.TrimPrefix(r.URL.Path, "/notes/")
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Gived ID is not a number", http.StatusBadRequest)
+		return
+	}
 
 	targetIndex := -1
     for i, note := range notes {
@@ -53,7 +108,7 @@ func deleteNotesHandler(w http.ResponseWriter, r *http.Request) {
     }
 
 	if targetIndex == -1 {
-        http.Error(w, "Nie znaleziono notatki", http.StatusNotFound)
+        http.Error(w, "note with given ID not found", http.StatusNotFound)
         return
     }
 
@@ -68,6 +123,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		postNotesHandler(w, r)
 	case "DELETE":
 		deleteNotesHandler(w, r)
+	case "PUT":
+		updateNotesHandler(w, r)
 	default:
 		fmt.Println("not a case")
 	}
